@@ -29,14 +29,13 @@ router.post('/admin/login', async (req, res) => {
 
     res.cookie('adminToken', token, {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      secure: true,               // ✅ Must be true in production with HTTPS
+      sameSite: 'None',           // ✅ Required for cross-origin cookies
     });
 
     res.json({
       success: true,
-      token,
       admin: {
         id: admin._id,
         name: admin.name,
@@ -53,19 +52,16 @@ router.post('/student/register', async (req, res) => {
   try {
     const { name, email, phone, college, course, year, usnNo, group } = req.body;
 
-    // Check if the student already exists by email
     const existingStudentByEmail = await Student.findOne({ email });
     if (existingStudentByEmail) {
-      return res.status(400).json({ message: 'Student already registered with this email' });
+      return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Check if the student already exists by USN
     const existingStudentByUSN = await Student.findOne({ usnNo });
     if (existingStudentByUSN) {
-      return res.status(400).json({ message: 'Student already registered with this USN' });
+      return res.status(400).json({ message: 'USN already registered' });
     }
 
-    // Create new student object if both checks pass
     const student = new Student({
       name,
       email,
@@ -77,28 +73,23 @@ router.post('/student/register', async (req, res) => {
       group,
     });
 
-    // Save the student to the database
     await student.save();
 
-    // Generate JWT Token for the student
     const token = jwt.sign(
       { id: student._id },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    // Set the token in a cookie
     res.cookie('studentToken', token, {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+      secure: true,               // ✅ Secure + None for cross-origin
+      sameSite: 'None',
     });
 
-    // Respond with success
     res.status(201).json({
       success: true,
-      token,
       student: {
         id: student._id,
         name: student.name,
@@ -108,15 +99,23 @@ router.post('/student/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error during student registration:', error);
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('adminToken');
-  res.clearCookie('studentToken');
+  res.clearCookie('adminToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None'
+  });
+  res.clearCookie('studentToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None'
+  });
   res.json({ success: true });
 });
 
@@ -124,7 +123,6 @@ router.post('/logout', (req, res) => {
 router.post('/setup', async (req, res) => {
   try {
     const adminExists = await Admin.countDocuments();
-
     if (adminExists > 0) {
       return res.status(400).json({ message: 'Admin already exists' });
     }
