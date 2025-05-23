@@ -23,8 +23,13 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet()); // Adds security headers
 app.use(express.json());
 app.use(cookieParser());
+// app.use(cors({
+//   origin: 'https://elevareconnectllp.org',  // <-- your frontend domain
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//   credentials: true
+// }));
 app.use(cors({
-  origin: 'https://elevareconnectllp.org',  // <-- your frontend domain
+  origin: ['http://localhost:3000', 'https://elevareconnectllp.org'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
